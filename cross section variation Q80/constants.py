@@ -1,6 +1,5 @@
 # Constants
 from scipy.constants import physical_constants as pc
-import torch as tn
 s = (13e3)**2 # Center-of-mass energy squared in GeV^2
 Nc = 3  # Number of colors in QCD
 m_Z = 91.1876  # Mass of the Z boson in GeV/c^2
