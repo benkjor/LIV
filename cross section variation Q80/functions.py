@@ -117,3 +117,11 @@ def d_sigma_sm(Q2, quark_couplings):
         d_sigma += factor * (sum_terms_L + sum_terms_R) * integral
 
     return 0.38 * 1e9 * d_sigma  # Conversion from GeV^-2 to Pb
+    
+def sm(Q_min, Q_max, CL, CR, p1, p2, quark_couplings):
+    
+    def integ(Q2):
+        Q2 ==Q**2
+        return d_sgima((Q2, CL, CR, p1, p2, quark_couplings):
+       int = quad(integ, Q_min, Q_max)
+    return int
