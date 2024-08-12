@@ -8,7 +8,6 @@ from math import pi
 
 tn.set_printoptions(precision=10, sci_mode=False)
 
-
 # Define the location of CMS in terms of longitude, latitude and azimuth
 
 azimuth = 1.7677    
