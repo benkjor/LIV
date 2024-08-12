@@ -268,7 +268,7 @@ axs[1, 1].legend()
 
 # Adjust layout
 plt.tight_layout()
-
+plt.savefig("plots.png")
 # Show the plot
 plt.show()
 
@@ -290,6 +290,7 @@ plt.ylabel('Value')
 plt.title('Sinusoidal Pseudo-data Over 24 Time Steps')
 plt.legend()
 plt.grid(True)
+plt.savefig("pseudo.png")
 plt.show()
 
 # Create the linear values
@@ -335,6 +336,7 @@ plt.xlabel('Index of pm, pn pair')
 plt.ylabel('d_sigma')
 plt.title('d_sigma results for different C values')
 plt.grid(True)
+plt.savefig("variation.png")
 plt.show()
 
 chi2_values = []
@@ -351,5 +353,6 @@ plt.title('$\chi^2$ as a function of C')
 ax = plt.gca()
 ax.yaxis.set_major_locator(plt.MaxNLocator(integer=True))
 plt.grid(True)
+plt.savefig("chi2.png")
 plt.show()
 
