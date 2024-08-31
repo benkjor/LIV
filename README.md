@@ -12,5 +12,4 @@ Coding
 1- the most important file is functions.py, this script contains all the nesseccary functions for the calculations. 
 2- constants.py contains the used constants and they can be changed to be more precise
 3- rotation.py contains the definition of the rotating matrices from the SCF to the collider frame.
-4- pdfpy.py 
 
