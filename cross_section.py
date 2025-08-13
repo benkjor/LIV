@@ -27,25 +27,25 @@ g = tn.tensor([
     [0,0,-1,0],
     [0,0,0,-1]
 ], dtype=tn.float32)
-CL1_0 = tn.tensor([
+Cxx = tn.tensor([
     [0, 0, 0, 0],
     [0, 1, 0, 0],
     [0, 0, -1, 0],
     [0,0, 0, 0]
 ], dtype=tn.float32)
-CL2_0 = tn.tensor([
+Cxy = tn.tensor([
     [0, 0, 0, 0],
     [0, 0, -1, 0],
     [0, -1, 0, 0],
     [0,0, 0, 0]
 ], dtype=tn.float32)
-CL3_0 = tn.tensor([
+Cxz = tn.tensor([
     [0, 0, 0, 0],
     [0, 0, 0, -1],
     [0, 0, 0, 0],
     [0,-1, 0, 0]
 ], dtype=tn.float32)
-CL4_0 = tn.tensor([
+Cyz = tn.tensor([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, -1],
@@ -59,7 +59,7 @@ CLzz = tn.tensor([
     [0,0,0, -1]
 ], dtype=tn.float32)
 
-CR_0 = tn.tensor([
+C0 = tn.tensor([
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
@@ -233,7 +233,7 @@ def drell_yan_cs(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, C
     hours_array = np.array(hours_start)
     return dratios, hours_array
 
-def calculate_variations(quarks, time, time_delta, Q_min, Q_max, CL_coeffs, single = False, which_tensor = 0):
+def calculate_variations(quarks, time, time_delta, Q_min, Q_max, CL_coeffs, CR_coeffs, which_tensor, single = False):
     ## time: [year, month (?), day, h?, m???]
     #### assumes timedelta is in days
     
@@ -246,35 +246,64 @@ def calculate_variations(quarks, time, time_delta, Q_min, Q_max, CL_coeffs, sing
 
     contrelep1, contrelep2, times = rotation_matricies(start_time, end_time)
     
-    CR = CR_0*1
+    tensors = [C0, Cxx, Cxy, Cxz, Cyz]
+
     if single:
-        tensors = [CL1_0, CL2_0, CL3_0, CL4_0]
-        print(tensors[which_tensor])
-        dratios, hours_array = drell_yan_cs_single(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, tensors[which_tensor]*CL_coeffs[0], CR)
+        dratios, hours_array = drell_yan_cs_single(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, tensors[which_tensor[0]]*CL_coeffs[0], tensors[which_tensor[1]]*CR_coeffs[0])
     else:
-        CL1 = CL1_0*CL_coeffs[0]
-        CL2 = CL2_0*CL_coeffs[1]
-        CL3 = CL3_0*CL_coeffs[2]
-        CL4 = CL4_0*CL_coeffs[3]
-        dratios, hours_array = drell_yan_cs(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, CL1, CL2, CL3, CL4, CR)
+        if len(which_tensor[0]) == 1:
+            #### this is actually not implemented yet, need to allow for the right handed one to vary
+            CL1 = tensors[which_tensor[1, 0]]*CR_coeffs[0]
+            CL2 = tensors[which_tensor[1, 1]]*CR_coeffs[1]
+            CL3 = tensors[which_tensor[1, 2]]*CR_coeffs[2]
+            CL4 = tensors[which_tensor[1, 3]]*CR_coeffs[3]
+            dratios, hours_array = drell_yan_cs(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, CL1, CL2, CL3, CL4, tensors[4])
+        elif len(which_tensor[1]) == 1:
+            CL1 = tensors[which_tensor[0, 0]]*CL_coeffs[0]
+            CL2 = tensors[which_tensor[0, 1]]*CL_coeffs[1]
+            CL3 = tensors[which_tensor[0, 2]]*CL_coeffs[2]
+            CL4 = tensors[which_tensor[0, 3]]*CL_coeffs[3]
+            dratios, hours_array = drell_yan_cs(Q_min, Q_max, times, quark_couplings, contrelep1, contrelep2, CL1, CL2, CL3, CL4, tensors[4])
     return dratios, hours_array
 
-def make_variation_plot(dratios, hours_array, cl_coeffs, outname, yrange = [0.95, 1.05]):
-    yrange = [0.9, 1.1]
+def make_variation_plot(dratios, hours_array, cl_coeffs, outname, cr_coeffs = [], yrange = [0.95, 1.05], coeff_type = 'L', bin_low = 70, bin_high = 80):
+    #### need to make this more adaptable
+    yrange = [0.95, 1.05]
     plt.figure(figsize=(10, 8))
     colors = ['mediumblue', 'red', 'goldenrod','limegreen' ]
     # Increase line width and adjust line styles for differentiation
     line_styles = [(5, (10, 3)), '--', '-.', '-']
+    if coeff_type == 'both':
+        cl_label = "{:.2e}".format(cl_coeffs[0])
+        cr_label = "{:.2e}".format(cr_coeffs[0])
+        labels=['$c_L^{11}=-c_L^{22}=$' + f'{cl_label}', '$c_R^{11}=-c_R^{22}=$' + f'{cr_label}']
 
-    c1_label = "{:.2e}".format(cl_coeffs[0])
-    c2_label = "{:.2e}".format(cl_coeffs[1])
-    c3_label = "{:.2e}".format(cl_coeffs[2])
-    c4_label = "{:.2e}".format(cl_coeffs[3])
+        for i in range(len(dratios)):
+            plt.step(hours_array, np.array(dratios[i][0]), where='post', color=colors[i], label=labels[i], linewidth=2.5, linestyle=line_styles[i])
+            
+    elif coeff_type == 'all':
+        cl_up_label = "{:.2e}".format(cl_coeffs[0])
+        cr_up_label = "{:.2e}".format(cr_coeffs[0])
+        cl_down_label = "{:.2e}".format(cl_coeffs[0])
+        cr_down_label = "{:.2e}".format(cr_coeffs[0])
+        labels=['$c_{u,L}^{11}=$' + f'{cl_up_label}', '$c_{u,R}^{11}=$' + f'{cr_up_label}', '$c_{d,L}^{11}=$' + f'{cl_down_label}', '$c_{d,R}^{11}=$' + f'{cr_down_label}']
 
-    labels=['$c^{11}=-c^{22}=$' + f'{c1_label}','$c^{12}=c^{21}=$'+ f'{c2_label}', '$c^{13}=c^{31}=$'+f'{c3_label}','$c^{23}=c^{32}=$' +f'{c4_label}']
-
-    for i in range(4):
-        plt.step(hours_array, dratios[i], where='post', color=colors[i], label=labels[i], linewidth=2.5, linestyle=line_styles[i])
+        for i in range(len(dratios)):
+            plt.step(hours_array, np.array(dratios[i][0]), where='post', color=colors[i], label=labels[i], linewidth=2.5, linestyle=line_styles[i])
+        
+    else:
+        c1_label = "{:.2e}".format(cl_coeffs[0])
+        labels=['$c_R^{11}=-c_R^{22}=$' + f'{c1_label}']
+        if len(cl_coeffs) > 1:
+            c2_label = "{:.2e}".format(cl_coeffs[1])
+            c3_label = "{:.2e}".format(cl_coeffs[2])
+            c4_label = "{:.2e}".format(cl_coeffs[3])
+            labels=['$c_L^{11}=-c_L^{22}=$' + f'{c1_label}','$c_L^{12}=c_L^{21}=$'+ f'{c2_label}', '$c_L^{13}=c_L^{31}=$'+f'{c3_label}','$c_L^{23}=c_L^{32}=$' +f'{c4_label}']
+            
+            if coeff_type != 'L':
+                labels=['$c_R^{11}=-c_R^{22}=$' + f'{c1_label}','$c_R^{12}=c_R^{21}=$'+ f'{c2_label}', '$c_R^{13}=c_R^{31}=$'+f'{c3_label}','$c_R^{23}=c_R^{32}=$' +f'{c4_label}']
+        for i in range(len(cl_coeffs)):
+            plt.step(hours_array, dratios[i], where='post', color=colors[i], label=labels[i], linewidth=2.5, linestyle=line_styles[i])
 
     # Customizing the legend: move it inside the plot area, adjust font size, and add a background
     plt.legend(loc='best', fontsize=12, frameon=True, fancybox=True, framealpha=0.8, edgecolor='gray')
@@ -282,7 +311,7 @@ def make_variation_plot(dratios, hours_array, cl_coeffs, outname, yrange = [0.95
     # Adding labels and title with increased font size for clarity
     plt.xlabel('Time (hours)', fontsize=14)
     plt.ylabel(r'$\sigma_{SME}/\sigma_{SM}$', fontsize=14)
-    plt.title(r'$SME/SM \; at \; Q \in [70,80] \; GeV$', fontsize=18, loc='left')
+    plt.title(r'$SME/SM \; at \; Q \in $' + f'[{bin_low},{bin_high}]' + r'$\; GeV$', fontsize=18, loc='left')
 
     # Add grid lines for better readability
     plt.grid(True, which='both', linestyle='--', linewidth=0.6, alpha=0.3)
@@ -409,13 +438,25 @@ Q_range = [50, 60.3, 85.2298, 88.1398, 89.3644, 90.16, 90.8102, 91.428, 92.1163,
 ##### UP VALUES
 # cL_coeffs = [2.5e-4,2.5e-4,1.2e-4,1.2e-4]
 #### UP UNCERTAINTIES
-cL_coeffs = [2.5e-4, 2.5e-4, 1.2e-4, 1.2e-4] ### values are too large
+# cL_coeffs = [2.5e-4, 2.5e-4, 1.2e-4, 1.2e-4] ### values are too large
+cL_coeffs = [0]
+cR_coeffs = [1e-4]
 
-dratios, hours_array = calculate_variations(['u'], [2016, 1, 1, 0, 0], 1, 50, 60.3 , cL_coeffs)
+
+dratios_r_up, hours_array_r = calculate_variations(['u'], [2016, 1, 1, 0, 0], 1, 50, 60.3 , cL_coeffs, cR_coeffs, [0, 1], single = True)
+dratios_l_up, hours_array = calculate_variations(['u'], [2016, 1, 1, 0, 0], 1, 50, 60.3 , cR_coeffs, cL_coeffs, [1, 0], single = True)
+
+dratios_r_down, hours_array_r = calculate_variations(['d'], [2016, 1, 1, 0, 0], 1, 50, 60.3 , cL_coeffs, cR_coeffs, [0, 1], single = True)
+dratios_l_down, hours_array = calculate_variations(['d'], [2016, 1, 1, 0, 0], 1, 50, 60.3 , cR_coeffs, cL_coeffs, [1, 0], single = True)
 # print("variation successful")
 file_out = '/home/submit/jbenke/public_html/'
-make_variation_plot(dratios, hours_array, cL_coeffs, f'{file_out}up_quark')
+dratios = [dratios_l_up, dratios_r_up, dratios_l_down, dratios_r_down]
 
+make_variation_plot(dratios, hours_array, cR_coeffs, f'{file_out}_comparison', cr_coeffs=cR_coeffs, coeff_type='all', bin_low = 50, bin_high = 60.3)
+
+
+
+'''
 #### DOWN VALUES
 # cL_coeffs = [2.5e-4,2.5e-4,1.2e-4,1.2e-4]
 
@@ -440,3 +481,32 @@ def nonlinear_function(cl_coeff):
 #     closest_input = find_closest_input(nonlinear_function, val, bounds=(1e-6, 1e-3))
 #     print("final_answer")
 #     print(closest_input)
+'''
+
+
+### generating the amplitudes
+
+coeff = [1e-4]
+quarks = ['u', 'd']
+Q_range = np.linspace(15, 120, 15) 
+## structure is mass bin, coeff #, u/d, l/r, value
+amplitudes = np.zeros([len(Q_range)-1, 4, 2, 2, 24])
+amp_max = np.copy(amplitudes)
+for i in range(len(Q_range)-1):
+    print(f"mass bin: {i}")
+    for j in range(1, 5):
+        print(f"coefficient: {j}")
+        for k in range(len(quarks)) :
+            bin_low = Q_range[i]
+            bin_high = Q_range[i+1]
+            dratios_l, _ = calculate_variations([quarks[k]], [2016, 1, 1, 0, 0], 1, bin_low, bin_high, coeff, [0], [j, 0], single = True)
+            dratios_r, hours_array = calculate_variations([quarks[k]], [2016, 1, 1, 0, 0], 1, bin_low, bin_high, [0], coeff, [0, j], single = True)
+
+            amplitudes[i, j-1, k, 0] = dratios_l[0]
+            amplitudes[i, j-1, k, 1] = dratios_r[0]
+            amp_max[i, j-1, k, 0] = np.max(dratios_l[0])
+            amp_max[i, j-1, k, 1] = np.max(dratios_r[0])
+            
+            
+np.save("/work/submit/jbenke/WRemnants/scripts/corrections/liv_amplitudes_lr_FINE.npy", amplitudes)
+np.save("/work/submit/jbenke/WRemnants/scripts/corrections/liv_max_amplitudes_lr_FINE.npy", amp_max)
